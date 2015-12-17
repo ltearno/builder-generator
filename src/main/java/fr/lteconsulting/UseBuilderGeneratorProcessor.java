@@ -181,7 +181,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		if( !mandatoryParameters.isEmpty() )
 		{
 			ParameterInfo info = mandatoryParameters.get( 0 );
-			String nextInterfaceName = mandatoryParameters.size() > 1 ? mandatoryParameters.get( mandatoryParameters.size() - 1 ).interfaceName : "OptionalParameters";
+			String nextInterfaceName = mandatoryParameters.size() > 1 ? mandatoryParameters.get( 1 ).interfaceName : "OptionalParameters";
 
 			String capitalized = capitalize( info.parameterName );
 			sb.append( tab + "public static " + nextInterfaceName + " with" + capitalized + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );

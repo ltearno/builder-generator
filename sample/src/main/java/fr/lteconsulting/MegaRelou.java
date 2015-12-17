@@ -16,7 +16,7 @@ public class MegaRelou
 	private String e;
 
 	@UseBuilderGenerator
-	public MegaRelou(@Mandatory String a, String b, @Mandatory String c, String d, String e)
+	public MegaRelou(@Mandatory String a, String b, @Mandatory String c, String d, @Mandatory String e)
 	{
 		this.a = a;
 		this.b = b;
