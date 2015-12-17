@@ -1,5 +1,7 @@
 # Builder Generator
 
+[![Build Status](https://travis-ci.org/ltearno/builder-generator.svg?branch=master)](https://travis-ci.org/ltearno/builder-generator)
+
 Builder Generator is a Java library allowing you to automatically generate builder classes for your constructors.
 
 It uses the builder pattern described [here](http://www.jayway.com/2012/02/07/builder-pattern-with-a-twist/). An advantage to this pattern is that it manages **mandatory** parameters in a clean and elegant way.
