@@ -45,7 +45,7 @@ Imagine you have a class with a terrible amount of parameters. Let's say `a`, `c
 
 `Builder generator` allows you to instead generate a builder with the `UseBuilderGenerator` annotation. (You can by the way certainly remove your overloaded constructors...) :
 
-public class ComplexClass
+	public class ComplexClass
 	{
 		private String a;
 		private String b;
@@ -54,14 +54,13 @@ public class ComplexClass
 		private String e;
 	
 		@UseBuilderGenerator
-	public ComplexClass(@Mandatory String a, String b, @Mandatory String c, String d, @Mandatory String e)
+		public ComplexClass(@Mandatory String a, String b, @Mandatory String c, String d, @Mandatory String e)
 		{
-			...
+			... // your normal constructor
 		}
 	}
-}
 
-When you want to create an instance of this class, you use the builder :
+When you want to create an instance of this class, you use the generated builder :
 
 		ComplexClass instance = ComplexClassBuilder
 				.withA("this one is mandatory")
