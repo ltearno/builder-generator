@@ -29,7 +29,7 @@ import javax.tools.JavaFileObject;
  * The generated builder supports mandatory parameters, which should be annotated with {@link Mandatory}.
  * 
  * <p>
- * The generated builders conform to the pattern described here : .
+ * The generated builders conform to the pattern described here : http://www.jayway.com/2012/02/07/builder-pattern-with-a-twist/.
  * 
  * @author Arnaud Tournier www.lteconsulting.fr github.com/ltearno @ltearno
  *
