@@ -69,6 +69,8 @@ When you want to create an instance of this class, you use the generated builder
 				.withD("an optional parameter")
 				.build();
 
+Since the code is generated, you can even copy it in your own source and remove the annotations, but it won't be automatically maintained...
+
 All kinds of possibilities are offered here, so may this be useful !
 
 ## Note about IDE integration
