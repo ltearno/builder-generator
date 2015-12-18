@@ -4,7 +4,7 @@ public class Demonstration
 {
 	public static void main(String[] args)
 	{
-		ComplexClass instance = ComplexClassBuilder
+		ComplexClass instance = SimpleBuilder
 				.withA("this one is mandatory")
 				.bonjour( "monsieur" )
 				.withC("this one too")

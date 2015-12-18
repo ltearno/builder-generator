@@ -8,8 +8,9 @@ import java.lang.annotation.Target;
 /**
  * Ask for automatic generation of a builder for a constructor
  */
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.CONSTRUCTOR)
+@Retention( RetentionPolicy.SOURCE )
+@Target( ElementType.CONSTRUCTOR )
 public @interface UseBuilderGenerator
 {
+	String builderName() default "";
 }

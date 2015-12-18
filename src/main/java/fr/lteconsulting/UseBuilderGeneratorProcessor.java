@@ -69,6 +69,9 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		// prepare and do code generation
 		String packageName = getPackageName( element );
 		String builderClassName = getEnclosingTypeName( element ) + "Builder";
+		UseBuilderGenerator useBuilderGeneratorAnnotation = element.getAnnotation( UseBuilderGenerator.class );
+		if( useBuilderGeneratorAnnotation != null && !useBuilderGeneratorAnnotation.builderName().isEmpty() )
+			builderClassName = useBuilderGeneratorAnnotation.builderName();
 		String builderClassFqn = packageName + "." + builderClassName;
 
 		StringBuilder sb = new StringBuilder();
