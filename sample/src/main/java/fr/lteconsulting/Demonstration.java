@@ -1,24 +1,23 @@
 package fr.lteconsulting;
 
-import com.toto.SimpleBuilder;
+import fr.lteconsulting.builders.ComplexClassBuilder;
 
 public class Demonstration
 {
 	public static void main(String[] args)
 	{
-		ComplexClass instance = SimpleBuilder
+		ComplexClass instance = ComplexClassBuilder
 				.withA("this one is mandatory")
 				.bonjour("monsieur")
 				.withC("this one too")
 				.withE("all this is generated !")
 				.withD("an optional parameter")
 				.build();
-		System.out.println(instance.toString());
 
-		SimpleBuilder.prepare().withA(null).bonjour(null).withC(null).withE(null).build();
+		ComplexClassBuilder.prepare().withA(null).bonjour(null).withC(null).withE(null).build();
 
-		PeteBurneBuilder.withA("khkjh").withB(null).call();
+		SomeMethodeCaller.prepare().withImportantNote(52).call();
 
-		ComplexMethodCaller.prepare().withImportantNote(52).call();
+		GetValeurCaller.prepare(instance).withX(12).withToto('a').call();
 	}
 }

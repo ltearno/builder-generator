@@ -1,6 +1,5 @@
 package fr.lteconsulting;
 
-
 public class ComplexClass
 {
 	private String a;
@@ -13,8 +12,9 @@ public class ComplexClass
 
 	private String e;
 
-	@UseBuilderGenerator( builderName="SimpleBuilder", builderPackage="com.toto")
-	public ComplexClass(@Mandatory String a, @Parameter(mandatory=true, name="bonjour") String b, @Mandatory String c, String d, @Mandatory String e)
+	@UseBuilderGenerator(builderPackage = "fr.lteconsulting.builders")
+	public ComplexClass(@Mandatory String a, @Parameter(mandatory = true, name = "bonjour") String b,
+			@Mandatory String c, String d, @Mandatory String e)
 	{
 		this.a = a;
 		this.b = b;
@@ -23,9 +23,16 @@ public class ComplexClass
 		this.e = e;
 	}
 
-	@UseBuilderGenerator(builderName = "ComplexMethodCaller", finalMethodName = "call")
-	public static void maMethodeCompliquee(@Parameter(mandatory = true, name = "withImportantNote") int a, int b)
+	@UseBuilderGenerator
+	public static String someMethode(@Parameter(mandatory = true, name = "withImportantNote") int a, int b)
 	{
+		return null;
+	}
+
+	@UseBuilderGenerator
+	public Integer getValeur(int p1, int c2, @Mandatory int x, int y, int z, char toto)
+	{
+		return 5;
 	}
 
 	public String getA()

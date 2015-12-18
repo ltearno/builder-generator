@@ -16,5 +16,5 @@ public @interface UseBuilderGenerator
 
 	String builderPackage() default "";
 
-	String finalMethodName() default "build";
+	String finalMethodName() default "";
 }

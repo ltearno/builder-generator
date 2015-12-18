@@ -69,23 +69,34 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		// split the constructor parameters into mandatory and optional
 		analyzeParametersAndFeedLists( element, mandatoryParameters, optionalParameters );
 
+		boolean staticCall = true;
 		String returnTypeFqn;
 		String finalCallText;
+		String defaultFinalMethodName;
+		String defaultBuilderClassName;
 		if( element.getKind() == ElementKind.CONSTRUCTOR )
 		{
 			returnTypeFqn = getEnclosingTypeElement( element ).getQualifiedName().toString();
 			finalCallText = "new " + getEnclosingTypeElement( element ).getQualifiedName().toString();
+			defaultFinalMethodName = "build";
+			defaultBuilderClassName = getEnclosingTypeElement( element ).getSimpleName().toString() + "Builder";
 		}
 		else if( element.getKind() == ElementKind.METHOD )
 		{
+			returnTypeFqn = element.getReturnType().toString();
+
 			if( !element.getModifiers().contains( Modifier.STATIC ) )
 			{
-				processingEnv.getMessager().printMessage( Kind.ERROR, "This method should be static to be called by builder generator !", element );
-				return;
+				finalCallText = "calledInstance" + "." + element.getSimpleName();
+				staticCall = false;
+			}
+			else
+			{
+				finalCallText = getEnclosingTypeElement( element ).getQualifiedName() + "." + element.getSimpleName();
 			}
 
-			returnTypeFqn = element.getReturnType().toString();
-			finalCallText = getEnclosingTypeElement( element ).getQualifiedName() + "." + element.getSimpleName();
+			defaultFinalMethodName = "call";
+			defaultBuilderClassName = capitalize( element.getSimpleName().toString() ) + "Caller";
 		}
 		else
 		{
@@ -95,16 +106,18 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 
 		// prepare and do code generation
 		UseBuilderGenerator useBuilderGeneratorAnnotation = element.getAnnotation( UseBuilderGenerator.class );
-		String finalMethodName = useBuilderGeneratorAnnotation.finalMethodName();
+		String finalMethodName = defaultFinalMethodName;
+		if( !useBuilderGeneratorAnnotation.finalMethodName().isEmpty() )
+			finalMethodName = useBuilderGeneratorAnnotation.finalMethodName();
 		String packageName = getPackageName( element );
 		if( !useBuilderGeneratorAnnotation.builderPackage().isEmpty() )
 			packageName = useBuilderGeneratorAnnotation.builderPackage();
-		String builderClassName = getEnclosingTypeElement( element ).getSimpleName().toString() + "Builder";
+		String builderClassName = defaultBuilderClassName;
 		if( !useBuilderGeneratorAnnotation.builderName().isEmpty() )
 			builderClassName = useBuilderGeneratorAnnotation.builderName();
 		String builderClassFqn = packageName + "." + builderClassName;
 
-		GeneratorContext ctx = new GeneratorContext( element, packageName, builderClassName, finalMethodName, returnTypeFqn, finalCallText, mandatoryParameters, optionalParameters, builderClassFqn );
+		GeneratorContext ctx = new GeneratorContext( element, staticCall, packageName, builderClassName, finalMethodName, returnTypeFqn, finalCallText, mandatoryParameters, optionalParameters, builderClassFqn );
 		StringBuilder sb = new StringBuilder();
 
 		generateBuilderClassCode( ctx, sb );
@@ -115,6 +128,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 	private static class GeneratorContext
 	{
 		final ExecutableElement element;
+		final boolean staticCall;
 		final String packageName;
 		final String builderClassName;
 		final String finalMethodName;
@@ -124,10 +138,11 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		final List<ParameterInformation> optionalParameters;
 		final String builderClassFqn;
 
-		public GeneratorContext( ExecutableElement element, String packageName, String builderClassName, String finalMethodName, String returnTypeFqn, String finalCallText, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters,
-				String builderClassFqn )
+		public GeneratorContext( ExecutableElement element, boolean staticCall, String packageName, String builderClassName, String finalMethodName, String returnTypeFqn, String finalCallText, List<ParameterInformation> mandatoryParameters,
+				List<ParameterInformation> optionalParameters, String builderClassFqn )
 		{
 			this.element = element;
+			this.staticCall = staticCall;
 			this.packageName = packageName;
 			this.builderClassName = builderClassName;
 			this.finalMethodName = finalMethodName;
@@ -210,6 +225,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( " {\r\n" );
 
 		generatePrivateFields( ctx, sb );
+		generateConstructor( ctx, sb );
 		generateBuildMethod( ctx, sb );
 		generateMandatorySetters( ctx, sb );
 		generateOptionalSetters( ctx, sb );
@@ -218,12 +234,26 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( "\r\n" );
 	}
 
+	private void generateConstructor( GeneratorContext ctx, StringBuilder sb )
+	{
+		if( ctx.staticCall )
+			return;
+
+		sb.append( tab + tab + "private BuilderInternal(" + getEnclosingTypeElement( ctx.element ).getQualifiedName() + " calledInstance) {\r\n" );
+		sb.append( tab + tab + tab + "this.calledInstance = calledInstance;\r\n" );
+		sb.append( tab + tab + "}\r\n" );
+		sb.append( tab + tab + "\r\n" );
+		sb.append( tab + tab + "\r\n" );
+	}
+
 	private void generatePrivateFields( GeneratorContext ctx, StringBuilder sb )
 	{
+		if( !ctx.staticCall )
+			sb.append( tab + tab + "private " + getEnclosingTypeElement( ctx.element ).getQualifiedName() + " calledInstance;\r\n" );
+
 		for( VariableElement parameter : ctx.element.getParameters() )
-		{
 			sb.append( tab + tab + "private " + parameter.asType() + " " + parameter.getSimpleName().toString() + ";\r\n" );
-		}
+
 		sb.append( "\r\n" );
 	}
 
@@ -282,18 +312,33 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			ParameterInformation info = ctx.mandatoryParameters.get( 0 );
 			String nextInterfaceName = ctx.mandatoryParameters.size() > 1 ? ctx.mandatoryParameters.get( 1 ).interfaceName : "OptionalParameters";
 
-			sb.append( tab + "public static " + nextInterfaceName + " " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
-			sb.append( tab + tab + "return new BuilderInternal()." + info.setterName + "(" + info.parameterName + ");\r\n" );
-			sb.append( tab + "}\r\n" );
+			if( ctx.staticCall )
+			{
+				sb.append( tab + "public static " + nextInterfaceName + " " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
+				sb.append( tab + tab + "return new BuilderInternal()." + info.setterName + "(" + info.parameterName + ");\r\n" );
+				sb.append( tab + "}\r\n" );
+			}
 
-			sb.append( tab + "public static " + info.interfaceName + " prepare() {\r\n" );
+			generatePrepareMethod( ctx, info.interfaceName, sb );
+		}
+		else
+		{
+			generatePrepareMethod( ctx, "OptionalParameters", sb );
+		}
+	}
+
+	private void generatePrepareMethod( GeneratorContext ctx, String shellInterfaceName, StringBuilder sb )
+	{
+		if( ctx.staticCall )
+		{
+			sb.append( tab + "public static " + shellInterfaceName + " prepare() {\r\n" );
 			sb.append( tab + tab + "return new BuilderInternal();\r\n" );
 			sb.append( tab + "}\r\n" );
 		}
 		else
 		{
-			sb.append( tab + "public static OptionalParameters prepare() {\r\n" );
-			sb.append( tab + tab + "return new BuilderInternal();\r\n" );
+			sb.append( tab + "public static " + shellInterfaceName + " prepare(" + getEnclosingTypeElement( ctx.element ).getQualifiedName() + " instance) {\r\n" );
+			sb.append( tab + tab + "return new BuilderInternal(instance);\r\n" );
 			sb.append( tab + "}\r\n" );
 		}
 	}
