@@ -14,5 +14,7 @@ public class Demonstration
 				.withD("an optional parameter")
 				.build();
 		System.out.println(instance.toString());
+		
+		SimpleBuilder.create().withA( null ).bonjour( null ).withC( null ).withE( null ).build();
 	}
 }

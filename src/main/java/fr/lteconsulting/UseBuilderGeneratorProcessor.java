@@ -228,6 +228,10 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			sb.append( tab + "public static " + nextInterfaceName + " " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
 			sb.append( tab + tab + "return new BuilderInternal()." + info.setterName + "(" + info.parameterName + ");\r\n" );
 			sb.append( tab + "}\r\n" );
+
+			sb.append( tab + "public static " + info.interfaceName + " create() {\r\n" );
+			sb.append( tab + tab + "return new BuilderInternal();\r\n" );
+			sb.append( tab + "}\r\n" );
 		}
 		else
 		{
