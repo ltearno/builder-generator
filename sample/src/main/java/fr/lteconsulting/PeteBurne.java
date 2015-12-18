@@ -15,7 +15,7 @@ public class PeteBurne
 	private String f;
 
 	@UseBuilderGenerator(finalMethodName = "call")
-	public PeteBurne(@Mandatory String a, @Mandatory String b, String c, @Mandatory String d, String e, String f)
+	public PeteBurne(@Mandatory String a, @Mandatory String b, String c, String d, String e, String f)
 	{
 		this.a = a;
 		this.b = b;

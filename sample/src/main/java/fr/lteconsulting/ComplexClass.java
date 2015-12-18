@@ -1,7 +1,5 @@
 package fr.lteconsulting;
 
-import fr.lteconsulting.Mandatory;
-import fr.lteconsulting.UseBuilderGenerator;
 
 public class ComplexClass
 {
@@ -23,6 +21,11 @@ public class ComplexClass
 		this.c = c;
 		this.d = d;
 		this.e = e;
+	}
+
+	@UseBuilderGenerator(builderName = "ComplexMethodCaller", finalMethodName = "call")
+	public static void maMethodeCompliquee(@Parameter(mandatory = true, name = "withImportantNote") int a, int b)
+	{
 	}
 
 	public String getA()

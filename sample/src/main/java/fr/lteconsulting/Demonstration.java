@@ -15,8 +15,10 @@ public class Demonstration
 				.build();
 		System.out.println(instance.toString());
 
-		SimpleBuilder.create().withA(null).bonjour(null).withC(null).withE(null).build();
+		SimpleBuilder.prepare().withA(null).bonjour(null).withC(null).withE(null).build();
 
-		PeteBurneBuilder.withA("khkjh").withB(null).withD(null).call();
+		PeteBurneBuilder.withA("khkjh").withB(null).call();
+
+		ComplexMethodCaller.prepare().withImportantNote(52).call();
 	}
 }

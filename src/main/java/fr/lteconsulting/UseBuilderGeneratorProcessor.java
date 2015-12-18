@@ -13,12 +13,13 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedSourceVersion;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.ExecutableElement;
+import javax.lang.model.element.Modifier;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.util.ElementFilter;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.JavaFileObject;
 
@@ -47,9 +48,11 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 	@Override
 	public boolean process( Set<? extends TypeElement> annotations, RoundEnvironment roundEnv )
 	{
-		for( ExecutableElement element : ElementFilter.constructorsIn( roundEnv.getElementsAnnotatedWith( UseBuilderGenerator.class ) ) )
+		for( Element e : roundEnv.getElementsAnnotatedWith( UseBuilderGenerator.class ) )
 		{
-			processConstructor( element );
+			if( e.getKind() != ElementKind.CONSTRUCTOR && e.getKind() != ElementKind.METHOD )
+				continue;
+			processExecutableElement( (ExecutableElement) e );
 		}
 
 		roundEnv.errorRaised();
@@ -57,7 +60,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		return true;
 	}
 
-	private void processConstructor( ExecutableElement element )
+	private void processExecutableElement( ExecutableElement element )
 	{
 		// prepare lists of mandatory and optional parameters
 		List<ParameterInformation> mandatoryParameters = new ArrayList<>();
@@ -65,6 +68,30 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 
 		// split the constructor parameters into mandatory and optional
 		analyzeParametersAndFeedLists( element, mandatoryParameters, optionalParameters );
+
+		String returnTypeFqn;
+		String finalCallText;
+		if( element.getKind() == ElementKind.CONSTRUCTOR )
+		{
+			returnTypeFqn = getEnclosingTypeElement( element ).getQualifiedName().toString();
+			finalCallText = "new " + getEnclosingTypeElement( element ).getQualifiedName().toString();
+		}
+		else if( element.getKind() == ElementKind.METHOD )
+		{
+			if( !element.getModifiers().contains( Modifier.STATIC ) )
+			{
+				processingEnv.getMessager().printMessage( Kind.ERROR, "This method should be static to be called by builder generator !", element );
+				return;
+			}
+
+			returnTypeFqn = element.getReturnType().toString();
+			finalCallText = getEnclosingTypeElement( element ).getQualifiedName() + "." + element.getSimpleName();
+		}
+		else
+		{
+			processingEnv.getMessager().printMessage( Kind.ERROR, "This element is not supported by builder generator !", element );
+			return;
+		}
 
 		// prepare and do code generation
 		UseBuilderGenerator useBuilderGeneratorAnnotation = element.getAnnotation( UseBuilderGenerator.class );
@@ -79,7 +106,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 
 		StringBuilder sb = new StringBuilder();
 
-		generateBuilderClassCode( element, packageName, builderClassName, finalMethodName, mandatoryParameters, optionalParameters, sb );
+		generateBuilderClassCode( element, packageName, builderClassName, finalMethodName, returnTypeFqn, finalCallText, mandatoryParameters, optionalParameters, sb );
 
 		saveBuilderClass( element, builderClassFqn, sb );
 	}
@@ -107,15 +134,16 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		}
 	}
 
-	private void generateBuilderClassCode( ExecutableElement element, String packageName, String builderClassName, String finalMethodName, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters, StringBuilder sb )
+	private void generateBuilderClassCode( ExecutableElement element, String packageName, String builderClassName, String finalMethodName, String returnTypeFqn, String finalCallText, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters,
+			StringBuilder sb )
 	{
 		sb.append( "package " + packageName + ";\r\n" );
 		sb.append( "\r\n" );
 		sb.append( "public class " + builderClassName + " {\r\n" );
 
 		generateMandatoryParametersInterfaces( mandatoryParameters, sb );
-		generateOptionalParametersInterface( element, finalMethodName, optionalParameters, sb );
-		generateBuilderImplementation( element, finalMethodName, mandatoryParameters, optionalParameters, sb );
+		generateOptionalParametersInterface( element, finalMethodName, returnTypeFqn, optionalParameters, sb );
+		generateBuilderImplementation( element, finalMethodName, returnTypeFqn, finalCallText, mandatoryParameters, optionalParameters, sb );
 		generateBootstrapMethod( mandatoryParameters, sb );
 
 		sb.append( "}\r\n" );
@@ -135,10 +163,10 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		}
 	}
 
-	private void generateOptionalParametersInterface( ExecutableElement element, String finalMethodName, List<ParameterInformation> optionalParameters, StringBuilder sb )
+	private void generateOptionalParametersInterface( ExecutableElement element, String finalMethodName, String returnTypeFqn, List<ParameterInformation> optionalParameters, StringBuilder sb )
 	{
 		sb.append( tab + "public interface OptionalParameters {\r\n" );
-		sb.append( tab + tab + getEnclosingTypeElement( element ).getQualifiedName().toString() + " " + finalMethodName + "();\r\n" );
+		sb.append( tab + tab + returnTypeFqn + " " + finalMethodName + "();\r\n" );
 		for( ParameterInformation info : optionalParameters )
 		{
 			sb.append( tab + tab + "OptionalParameters " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ");\r\n" );
@@ -147,7 +175,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( "\r\n" );
 	}
 
-	private void generateBuilderImplementation( ExecutableElement element, String finalMethodName, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters, StringBuilder sb )
+	private void generateBuilderImplementation( ExecutableElement element, String finalMethodName, String returnTypeFqn, String finalCallText, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters, StringBuilder sb )
 	{
 		sb.append( tab + "private static class BuilderInternal implements OptionalParameters" );
 		for( ParameterInformation info : mandatoryParameters )
@@ -155,7 +183,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( " {\r\n" );
 
 		generatePrivateFields( element, sb );
-		generateBuildMethod( element, finalMethodName, sb );
+		generateBuildMethod( element, finalMethodName, returnTypeFqn, finalCallText, sb );
 		generateMandatorySetters( mandatoryParameters, sb );
 		generateOptionalSetters( optionalParameters, sb );
 
@@ -172,10 +200,13 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( "\r\n" );
 	}
 
-	private void generateBuildMethod( ExecutableElement element, String finalMethodName, StringBuilder sb )
+	private void generateBuildMethod( ExecutableElement element, String finalMethodName, String returnTypeFqn, String finalCallText, StringBuilder sb )
 	{
-		sb.append( tab + tab + "@Override public " + getEnclosingTypeElement( element ).getQualifiedName() + " " + finalMethodName + "() {\r\n" );
-		sb.append( tab + tab + tab + "return new " + getEnclosingTypeElement( element ).getQualifiedName() + "(" );
+		sb.append( tab + tab + "@Override public " + returnTypeFqn + " " + finalMethodName + "() {\r\n" );
+		sb.append( tab + tab + tab );
+		if( !"void".equals( returnTypeFqn ) )
+			sb.append( "return " );
+		sb.append( finalCallText + "(" );
 		boolean first = true;
 		for( VariableElement parameter : element.getParameters() )
 		{
@@ -228,13 +259,13 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			sb.append( tab + tab + "return new BuilderInternal()." + info.setterName + "(" + info.parameterName + ");\r\n" );
 			sb.append( tab + "}\r\n" );
 
-			sb.append( tab + "public static " + info.interfaceName + " create() {\r\n" );
+			sb.append( tab + "public static " + info.interfaceName + " prepare() {\r\n" );
 			sb.append( tab + tab + "return new BuilderInternal();\r\n" );
 			sb.append( tab + "}\r\n" );
 		}
 		else
 		{
-			sb.append( tab + "public static OptionalParameters create() {\r\n" );
+			sb.append( tab + "public static OptionalParameters prepare() {\r\n" );
 			sb.append( tab + tab + "return new BuilderInternal();\r\n" );
 			sb.append( tab + "}\r\n" );
 		}
