@@ -13,5 +13,8 @@ import java.lang.annotation.Target;
 public @interface UseBuilderGenerator
 {
 	String builderName() default "";
+
 	String builderPackage() default "";
+
+	String finalMethodName() default "build";
 }

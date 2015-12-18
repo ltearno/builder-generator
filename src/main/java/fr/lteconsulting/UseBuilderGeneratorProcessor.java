@@ -68,17 +68,18 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 
 		// prepare and do code generation
 		UseBuilderGenerator useBuilderGeneratorAnnotation = element.getAnnotation( UseBuilderGenerator.class );
+		String finalMethodName = useBuilderGeneratorAnnotation.finalMethodName();
 		String packageName = getPackageName( element );
-		if( useBuilderGeneratorAnnotation != null && !useBuilderGeneratorAnnotation.builderPackage().isEmpty() )
+		if( !useBuilderGeneratorAnnotation.builderPackage().isEmpty() )
 			packageName = useBuilderGeneratorAnnotation.builderPackage();
 		String builderClassName = getEnclosingTypeElement( element ).getSimpleName().toString() + "Builder";
-		if( useBuilderGeneratorAnnotation != null && !useBuilderGeneratorAnnotation.builderName().isEmpty() )
+		if( !useBuilderGeneratorAnnotation.builderName().isEmpty() )
 			builderClassName = useBuilderGeneratorAnnotation.builderName();
 		String builderClassFqn = packageName + "." + builderClassName;
 
 		StringBuilder sb = new StringBuilder();
 
-		generateBuilderClassCode( element, packageName, builderClassName, mandatoryParameters, optionalParameters, sb );
+		generateBuilderClassCode( element, packageName, builderClassName, finalMethodName, mandatoryParameters, optionalParameters, sb );
 
 		saveBuilderClass( element, builderClassFqn, sb );
 	}
@@ -106,16 +107,15 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		}
 	}
 
-	private void generateBuilderClassCode( ExecutableElement element, String packageName, String builderClassName, List<ParameterInformation> mandatoryParameters,
-			List<ParameterInformation> optionalParameters, StringBuilder sb )
+	private void generateBuilderClassCode( ExecutableElement element, String packageName, String builderClassName, String finalMethodName, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters, StringBuilder sb )
 	{
 		sb.append( "package " + packageName + ";\r\n" );
 		sb.append( "\r\n" );
 		sb.append( "public class " + builderClassName + " {\r\n" );
 
 		generateMandatoryParametersInterfaces( mandatoryParameters, sb );
-		generateOptionalParametersInterface( element, optionalParameters, sb );
-		generateBuilderImplementation( element, mandatoryParameters, optionalParameters, sb );
+		generateOptionalParametersInterface( element, finalMethodName, optionalParameters, sb );
+		generateBuilderImplementation( element, finalMethodName, mandatoryParameters, optionalParameters, sb );
 		generateBootstrapMethod( mandatoryParameters, sb );
 
 		sb.append( "}\r\n" );
@@ -135,10 +135,10 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		}
 	}
 
-	private void generateOptionalParametersInterface( ExecutableElement element, List<ParameterInformation> optionalParameters, StringBuilder sb )
+	private void generateOptionalParametersInterface( ExecutableElement element, String finalMethodName, List<ParameterInformation> optionalParameters, StringBuilder sb )
 	{
 		sb.append( tab + "public interface OptionalParameters {\r\n" );
-		sb.append( tab + tab + getEnclosingTypeElement( element ).getQualifiedName().toString() + " build();\r\n" );
+		sb.append( tab + tab + getEnclosingTypeElement( element ).getQualifiedName().toString() + " " + finalMethodName + "();\r\n" );
 		for( ParameterInformation info : optionalParameters )
 		{
 			sb.append( tab + tab + "OptionalParameters " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ");\r\n" );
@@ -147,8 +147,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( "\r\n" );
 	}
 
-	private void generateBuilderImplementation( ExecutableElement element, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters,
-			StringBuilder sb )
+	private void generateBuilderImplementation( ExecutableElement element, String finalMethodName, List<ParameterInformation> mandatoryParameters, List<ParameterInformation> optionalParameters, StringBuilder sb )
 	{
 		sb.append( tab + "private static class BuilderInternal implements OptionalParameters" );
 		for( ParameterInformation info : mandatoryParameters )
@@ -156,7 +155,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( " {\r\n" );
 
 		generatePrivateFields( element, sb );
-		generateBuildMethod( element, sb );
+		generateBuildMethod( element, finalMethodName, sb );
 		generateMandatorySetters( mandatoryParameters, sb );
 		generateOptionalSetters( optionalParameters, sb );
 
@@ -173,9 +172,9 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( "\r\n" );
 	}
 
-	private void generateBuildMethod( ExecutableElement element, StringBuilder sb )
+	private void generateBuildMethod( ExecutableElement element, String finalMethodName, StringBuilder sb )
 	{
-		sb.append( tab + tab + "@Override public " + getEnclosingTypeElement( element ).getQualifiedName() + " build() {\r\n" );
+		sb.append( tab + tab + "@Override public " + getEnclosingTypeElement( element ).getQualifiedName() + " " + finalMethodName + "() {\r\n" );
 		sb.append( tab + tab + tab + "return new " + getEnclosingTypeElement( element ).getQualifiedName() + "(" );
 		boolean first = true;
 		for( VariableElement parameter : element.getParameters() )
