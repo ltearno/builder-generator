@@ -16,7 +16,7 @@ public class ComplexClass
 	private String e;
 
 	@UseBuilderGenerator
-	public ComplexClass(@Mandatory String a, String b, @Mandatory String c, String d, @Mandatory String e)
+	public ComplexClass(@Mandatory String a, @Parameter(mandatory=true, name="bonjour") String b, @Mandatory String c, String d, @Mandatory String e)
 	{
 		this.a = a;
 		this.b = b;

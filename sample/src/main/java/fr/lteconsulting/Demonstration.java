@@ -6,6 +6,7 @@ public class Demonstration
 	{
 		ComplexClass instance = ComplexClassBuilder
 				.withA("this one is mandatory")
+				.bonjour( "monsieur" )
 				.withC("this one too")
 				.withE("all this is generated !")
 				.withD("an optional parameter")

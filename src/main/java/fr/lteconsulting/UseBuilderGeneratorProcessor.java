@@ -29,6 +29,9 @@ import javax.tools.JavaFileObject;
  * The generated builder supports mandatory parameters, which should be annotated with {@link Mandatory}.
  * 
  * <p>
+ * For more detailed customization, use the {@link Parameter} annotation.
+ * 
+ * <p>
  * The generated builders conform to the pattern described here : http://www.jayway.com/2012/02/07/builder-pattern-with-a-twist/.
  * 
  * @author Arnaud Tournier www.lteconsulting.fr github.com/ltearno @ltearno
@@ -82,9 +85,19 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			String parameterName = parameter.getSimpleName().toString();
 			TypeMirror parameterType = parameter.asType();
 			Mandatory mandatoryAnnotation = parameter.getAnnotation( Mandatory.class );
+			Parameter parameterAnnotation = parameter.getAnnotation( Parameter.class );
 
-			ParameterInformation paramInfo = new ParameterInformation( parameterName, parameterType );
-			(mandatoryAnnotation != null ? mandatoryParameters : optionalParameters).add( paramInfo );
+			String setterName = "with" + capitalize( parameterName );
+			if( parameterAnnotation != null && !parameterAnnotation.name().isEmpty() )
+				setterName = parameterAnnotation.name();
+
+			ParameterInformation paramInfo = new ParameterInformation( parameterName, parameterType, setterName );
+
+			List<ParameterInformation> list = optionalParameters;
+			if( mandatoryAnnotation != null || (parameterAnnotation != null && parameterAnnotation.mandatory()) )
+				list = mandatoryParameters;
+
+			list.add( paramInfo );
 		}
 	}
 
@@ -110,9 +123,8 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			ParameterInformation paramInfo = mandatoryParameters.get( i );
 			String nextInterfaceName = i < mandatoryParameters.size() - 1 ? mandatoryParameters.get( i + 1 ).interfaceName : "OptionalParameters";
 
-			String capitalized = capitalize( paramInfo.parameterName );
 			sb.append( tab + "public interface " + paramInfo.interfaceName + " {\r\n" );
-			sb.append( tab + tab + nextInterfaceName + " with" + capitalized + "(" + paramInfo.parameterType + " " + paramInfo.parameterName + ");\r\n" );
+			sb.append( tab + tab + nextInterfaceName + " " + paramInfo.setterName + "(" + paramInfo.parameterType + " " + paramInfo.parameterName + ");\r\n" );
 			sb.append( tab + "}\r\n" );
 			sb.append( "\r\n" );
 		}
@@ -124,7 +136,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		sb.append( tab + tab + getEnclosingTypeName( element ) + " build();\r\n" );
 		for( ParameterInformation info : optionalParameters )
 		{
-			sb.append( tab + tab + "OptionalParameters with" + capitalize( info.parameterName ) + "(" + info.parameterType + " " + info.parameterName + ");\r\n" );
+			sb.append( tab + tab + "OptionalParameters " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ");\r\n" );
 		}
 		sb.append( tab + "}\r\n" );
 		sb.append( "\r\n" );
@@ -181,8 +193,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			ParameterInformation paramInfo = mandatoryParameters.get( i );
 			String nextInterfaceName = i < mandatoryParameters.size() - 1 ? mandatoryParameters.get( i + 1 ).interfaceName : "OptionalParameters";
 
-			String capitalized = capitalize( paramInfo.parameterName );
-			sb.append( tab + tab + "@Override public " + nextInterfaceName + " with" + capitalized + "(" + paramInfo.parameterType + " " + paramInfo.parameterName + ") {\r\n" );
+			sb.append( tab + tab + "@Override public " + nextInterfaceName + " " + paramInfo.setterName + "(" + paramInfo.parameterType + " " + paramInfo.parameterName + ") {\r\n" );
 			sb.append( tab + tab + tab + "this." + paramInfo.parameterName + " = " + paramInfo.parameterName + ";\r\n" );
 			sb.append( tab + tab + tab + "return this;\r\n" );
 			sb.append( tab + tab + "}\r\n" );
@@ -194,7 +205,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 	{
 		for( ParameterInformation info : optionalParameters )
 		{
-			sb.append( tab + tab + "@Override public OptionalParameters with" + capitalize( info.parameterName ) + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
+			sb.append( tab + tab + "@Override public OptionalParameters " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
 			sb.append( tab + tab + tab + "this." + info.parameterName + " = " + info.parameterName + ";\r\n" );
 			sb.append( tab + tab + tab + "return this;\r\n" );
 			sb.append( tab + tab + "}\r\n" );
@@ -209,9 +220,8 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 			ParameterInformation info = mandatoryParameters.get( 0 );
 			String nextInterfaceName = mandatoryParameters.size() > 1 ? mandatoryParameters.get( 1 ).interfaceName : "OptionalParameters";
 
-			String capitalized = capitalize( info.parameterName );
-			sb.append( tab + "public static " + nextInterfaceName + " with" + capitalized + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
-			sb.append( tab + tab + "return new BuilderInternal().with" + capitalized + "(" + info.parameterName + ");\r\n" );
+			sb.append( tab + "public static " + nextInterfaceName + " " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ") {\r\n" );
+			sb.append( tab + tab + "return new BuilderInternal()." + info.setterName + "(" + info.parameterName + ");\r\n" );
 			sb.append( tab + "}\r\n" );
 		}
 		else
@@ -248,12 +258,14 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		String parameterName;
 		TypeMirror parameterType;
 		String interfaceName;
+		String setterName;
 
-		public ParameterInformation( String parameterName, TypeMirror parameterType )
+		public ParameterInformation( String parameterName, TypeMirror parameterType, String setterName )
 		{
 			this.parameterName = parameterName;
 			this.parameterType = parameterType;
 			this.interfaceName = "MandatoryParameter" + capitalize( parameterName );
+			this.setterName = setterName;
 		}
 	}
 
