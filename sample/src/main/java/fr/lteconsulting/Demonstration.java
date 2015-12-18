@@ -1,5 +1,7 @@
 package fr.lteconsulting;
 
+import com.toto.SimpleBuilder;
+
 public class Demonstration
 {
 	public static void main(String[] args)

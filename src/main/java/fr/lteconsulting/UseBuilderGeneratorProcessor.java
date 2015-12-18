@@ -67,9 +67,11 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		analyzeParametersAndFeedLists( element, mandatoryParameters, optionalParameters );
 
 		// prepare and do code generation
-		String packageName = getPackageName( element );
-		String builderClassName = getEnclosingTypeName( element ) + "Builder";
 		UseBuilderGenerator useBuilderGeneratorAnnotation = element.getAnnotation( UseBuilderGenerator.class );
+		String packageName = getPackageName( element );
+		if( useBuilderGeneratorAnnotation != null && !useBuilderGeneratorAnnotation.builderPackage().isEmpty() )
+			packageName = useBuilderGeneratorAnnotation.builderPackage();
+		String builderClassName = getEnclosingTypeElement( element ).getSimpleName().toString() + "Builder";
 		if( useBuilderGeneratorAnnotation != null && !useBuilderGeneratorAnnotation.builderName().isEmpty() )
 			builderClassName = useBuilderGeneratorAnnotation.builderName();
 		String builderClassFqn = packageName + "." + builderClassName;
@@ -136,7 +138,7 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 	private void generateOptionalParametersInterface( ExecutableElement element, List<ParameterInformation> optionalParameters, StringBuilder sb )
 	{
 		sb.append( tab + "public interface OptionalParameters {\r\n" );
-		sb.append( tab + tab + getEnclosingTypeName( element ) + " build();\r\n" );
+		sb.append( tab + tab + getEnclosingTypeElement( element ).getQualifiedName().toString() + " build();\r\n" );
 		for( ParameterInformation info : optionalParameters )
 		{
 			sb.append( tab + tab + "OptionalParameters " + info.setterName + "(" + info.parameterType + " " + info.parameterName + ");\r\n" );
@@ -173,8 +175,8 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 
 	private void generateBuildMethod( ExecutableElement element, StringBuilder sb )
 	{
-		sb.append( tab + tab + "@Override public " + getEnclosingTypeName( element ) + " build() {\r\n" );
-		sb.append( tab + tab + tab + "return new " + getEnclosingTypeName( element ) + "(" );
+		sb.append( tab + tab + "@Override public " + getEnclosingTypeElement( element ).getQualifiedName() + " build() {\r\n" );
+		sb.append( tab + tab + tab + "return new " + getEnclosingTypeElement( element ).getQualifiedName() + "(" );
 		boolean first = true;
 		for( VariableElement parameter : element.getParameters() )
 		{
@@ -281,13 +283,13 @@ public class UseBuilderGeneratorProcessor extends AbstractProcessor
 		return ((PackageElement) element).getQualifiedName().toString();
 	}
 
-	private static String getEnclosingTypeName( Element element )
+	private static TypeElement getEnclosingTypeElement( Element element )
 	{
 		while( element != null && !(element instanceof TypeElement) )
 			element = element.getEnclosingElement();
 		if( element == null )
 			return null;
-		return ((TypeElement) element).getSimpleName().toString();
+		return (TypeElement) element;
 	}
 
 	private static String capitalize( String value )
