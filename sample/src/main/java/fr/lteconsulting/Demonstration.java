@@ -4,7 +4,7 @@ public class Demonstration
 {
 	public static void main(String[] args)
 	{
-		MegaRelou instance = MegaRelouBuilder
+		ComplexClass instance = ComplexClassBuilder
 				.withA("this one is mandatory")
 				.withC("this one too")
 				.withE("all this is generated !")

@@ -3,7 +3,7 @@ package fr.lteconsulting;
 import fr.lteconsulting.Mandatory;
 import fr.lteconsulting.UseBuilderGenerator;
 
-public class MegaRelou
+public class ComplexClass
 {
 	private String a;
 
@@ -16,7 +16,7 @@ public class MegaRelou
 	private String e;
 
 	@UseBuilderGenerator
-	public MegaRelou(@Mandatory String a, String b, @Mandatory String c, String d, @Mandatory String e)
+	public ComplexClass(@Mandatory String a, String b, @Mandatory String c, String d, @Mandatory String e)
 	{
 		this.a = a;
 		this.b = b;
